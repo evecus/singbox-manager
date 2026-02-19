@@ -33,7 +33,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist
-          path: web/dist/
+          path: web/
           retention-days: 1
 
   # ── 2. Lint ─────────────────────────────────────────────────────────────────
