@@ -98,14 +98,18 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	// FIX: Explicitly ignore Encode error as response writing is the final step
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func writeErr(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	// FIX: Explicitly ignore Encode error
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
+
+// ... 后续 handle 函数逻辑保持一致，调用 writeJSON 和 writeErr 即可 ...
 
 // ─── Status & Control ────────────────────────────────────────────────────────
 
