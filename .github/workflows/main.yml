@@ -104,7 +104,7 @@ jobs:
           SUFFIX=""
           [ "$GOOS" = "windows" ] && SUFFIX=".exe"
 
-          OUTPUT="dist/singbox-manager-${GOOS}-${ARCH}${SUFFIX}"
+          OUTPUT="singbox-manager-${GOOS}-${ARCH}${SUFFIX}"
           mkdir -p dist
 
           go build \
