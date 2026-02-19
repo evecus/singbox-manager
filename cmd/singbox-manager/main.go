@@ -71,7 +71,7 @@ func main() {
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
 		log.Println("Shutting down...")
-		proxyMgr.Stop(ctx)
+		_ = proxyMgr.Stop(ctx)
 		srv.Shutdown(ctx) //nolint:errcheck
 		cancel()
 	}()
