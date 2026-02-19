@@ -1,0 +1,15 @@
+# Go build output
+dist/
+*.exe
+singbox-manager
+
+# Node dependencies (never commit these)
+web/node_modules/
+
+# Runtime data
+*.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
