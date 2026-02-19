@@ -138,16 +138,19 @@ func (m *Manager) Stop(ctx context.Context) error {
 
 	m.setStatus(StatusStopping, "")
 	if m.cmd != nil && m.cmd.Process != nil {
-		m.cmd.Process.Signal(os.Interrupt)
+		// FIX: Explicitly ignore signal error
+		_ = m.cmd.Process.Signal(os.Interrupt)
 		done := make(chan struct{})
 		go func() {
-			m.cmd.Wait()
+			// FIX: Explicitly ignore wait error
+			_ = m.cmd.Wait()
 			close(done)
 		}()
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
-			m.cmd.Process.Kill()
+			// FIX: Explicitly ignore kill error
+			_ = m.cmd.Process.Kill()
 		}
 	}
 	system.CleanupRules(m.cfg.GetAppConfig())
@@ -156,7 +159,8 @@ func (m *Manager) Stop(ctx context.Context) error {
 }
 
 func (m *Manager) Restart(ctx context.Context) error {
-	m.Stop(ctx)
+	// FIX: Explicitly ignore stop error as we are starting anyway
+	_ = m.Stop(ctx)
 	time.Sleep(500 * time.Millisecond)
 	return m.Start(ctx)
 }
@@ -203,26 +207,26 @@ func parseLogLine(line string) LogEntry {
 
 // Proxy connection info from clash API
 type Connection struct {
-	ID          string            `json:"id"`
-	Metadata    ConnectionMeta    `json:"metadata"`
-	Upload      int64             `json:"upload"`
-	Download    int64             `json:"download"`
-	Start       time.Time         `json:"start"`
-	Chain       []string          `json:"chains"`
-	Rule        string            `json:"rule"`
-	RulePayload string            `json:"rulePayload"`
+	ID          string         `json:"id"`
+	Metadata    ConnectionMeta `json:"metadata"`
+	Upload      int64          `json:"upload"`
+	Download    int64          `json:"download"`
+	Start       time.Time      `json:"start"`
+	Chain       []string       `json:"chains"`
+	Rule        string         `json:"rule"`
+	RulePayload string         `json:"rulePayload"`
 }
 
 type ConnectionMeta struct {
-	Network    string `json:"network"`
-	Type       string `json:"type"`
-	SrcIP      string `json:"sourceIP"`
-	DstIP      string `json:"destinationIP"`
-	SrcPort    string `json:"sourcePort"`
-	DstPort    string `json:"destinationPort"`
-	Host       string `json:"host"`
-	DNSMode    string `json:"dnsMode"`
-	InboundIP  string `json:"inboundIp"`
+	Network     string `json:"network"`
+	Type        string `json:"type"`
+	SrcIP       string `json:"sourceIP"`
+	DstIP       string `json:"destinationIP"`
+	SrcPort     string `json:"sourcePort"`
+	DstPort     string `json:"destinationPort"`
+	Host        string `json:"host"`
+	DNSMode     string `json:"dnsMode"`
+	InboundIP   string `json:"inboundIp"`
 	InboundPort string `json:"inboundPort"`
 }
 
