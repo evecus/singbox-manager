@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  # ── 1. Build the React web UI ───────────────────────────────────────────────
+  # ── 1. 构建 React 前端 ──────────────────────────────────────────────────
   build-web:
     name: Build Web UI
     runs-on: ubuntu-latest
@@ -21,8 +21,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # cache omitted: package-lock.json is not committed yet.
-          # Commit it after first run to enable caching.
 
       - name: Install & build
         working-directory: web
@@ -30,13 +28,14 @@ jobs:
           npm install
           npm run build
 
+      # 将打包后的 dist 文件夹上传，注意 path 指向 web/dist
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist
           path: web/dist/
           retention-days: 1
 
-  # ── 2. Lint ─────────────────────────────────────────────────────────────────
+  # ── 2. 代码静态检查 (Lint) ────────────────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -48,19 +47,16 @@ jobs:
           go-version: '1.23'
           cache: true
 
-      # go mod tidy generates go.sum so golangci-lint typecheck resolves imports.
       - name: Tidy modules
         run: go mod tidy
 
       - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          # -tags noembed activates embed_stub.go instead of embed_prod.go.
-          # embed_stub.go uses an in-memory fstest.MapFS so there is no
-          # //go:embed directive that would require web/dist to exist on disk.
+          # 使用 noembed 标签跳过对真实 web/dist 目录的依赖检查
           args: --timeout=5m --build-tags noembed
 
-  # ── 3. Cross-compile ────────────────────────────────────────────────────────
+  # ── 3. 交叉编译 Go 二进制文件 ──────────────────────────────────────────────
   build-go:
     name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest
@@ -71,21 +67,28 @@ jobs:
         include:
           - { goos: linux, goarch: amd64 }
           - { goos: linux, goarch: arm64 }
-    
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 必须为 0 才能让 git describe 获取到完整的 tag 信息
 
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
           cache: true
 
-      # Populate web/dist with the real React build before go:embed runs.
+      # 【核心修复】将前端产物下载到 web/dist 目录
+      # 这样 Go 编译时的 //go:embed web/dist 才能找到文件
       - name: Download web dist
         uses: actions/download-artifact@v4
         with:
           name: web-dist
           path: web/dist/
+
+      # 调试步骤：如果构建依然失败，可以查看此日志确认文件路径
+      - name: Verify dist contents
+        run: ls -R web/dist/
 
       - name: Tidy & download modules
         run: go mod tidy
@@ -94,8 +97,6 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm }}
-          GOMIPS: ${{ matrix.gomips }}
           CGO_ENABLED: '0'
         run: |
           ARCH="${GOARCH}"
@@ -107,20 +108,21 @@ jobs:
           OUTPUT="dist/singbox-manager-${GOOS}-${ARCH}${SUFFIX}"
           mkdir -p dist
 
+          # 确保在根目录执行构建，以匹配 embed 路径
           go build \
             -ldflags="-s -w -X main.version=$(git describe --tags --always --dirty)" \
             -trimpath \
             -o "$OUTPUT" \
             ./cmd/singbox-manager
 
-          echo "Built: $OUTPUT  ($(du -sh "$OUTPUT" | cut -f1))"
+          echo "Built: $OUTPUT ($(du -sh "$OUTPUT" | cut -f1))"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: binary-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm && format('v{0}', matrix.goarm) || '' }}
+          name: binary-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
 
-  # ── 4. GitHub Release (tag only) ─────────────────────────────────────────────
+  # ── 4. 发布 GitHub Release (仅限 Tag 触发) ──────────────────────────────
   package:
     name: Release
     runs-on: ubuntu-latest
