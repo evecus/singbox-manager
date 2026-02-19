@@ -7,8 +7,18 @@ import (
 	"io/fs"
 )
 
-//go:embed web/dist
+// 包含所有文件，包括以 "." 开头的隐藏文件
+//go:embed all:web/dist
 var embeddedFS embed.FS
 
-// webFS exposes the embedded web/dist directory as a plain fs.FS.
-var webFS fs.FS = embeddedFS
+// webFS 会剥离 "web/dist" 前缀，
+// 使得 fs.Open("index.html") 实际上打开的是 web/dist/index.html
+var webFS fs.FS
+
+func init() {
+	var err error
+	webFS, err = fs.Sub(embeddedFS, "web/dist")
+	if err != nil {
+		panic(err)
+	}
+}
