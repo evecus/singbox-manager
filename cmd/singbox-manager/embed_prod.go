@@ -7,8 +7,8 @@ import (
 	"io/fs"
 )
 
-//go:embed web
+//go:embed web/dist
 var embeddedFS embed.FS
 
-// webFS exposes the embedded web directory as a plain fs.FS.
+// webFS exposes the embedded web/dist directory as a plain fs.FS.
 var webFS fs.FS = embeddedFS
